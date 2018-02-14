@@ -11,6 +11,6 @@ A simple Snake game using Delphi &amp; Platform eXtended Library (PXL v1.1.0).
 
 ## Download Platform eXtended Library
 
-You can download the latest version of Platform eXtended Library from the links below.
- --> http://asphyre.net/products/pxl
+You can download the latest version of Platform eXtended Library from the links below.<br>
+ --> http://asphyre.net/products/pxl <br>
  --> http://asphyre.sourceforge.net  
