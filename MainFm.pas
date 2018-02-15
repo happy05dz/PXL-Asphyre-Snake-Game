@@ -137,7 +137,7 @@ var
   SnakeBody: array[0..400] of Tpoint;
   i: Integer;
   Food: Tpoint;
-  x: Boolean;
+  xCollision: Boolean;
   PlaySound: Boolean;
   Level: Byte;
   SnakeSpeed: Byte;
@@ -480,11 +480,6 @@ end;
 
 //=======================================================================
 procedure TMainForm.RenderScene;
-var
-  J, I: Integer;
-  Omega, Kappa: VectorFloat;
-  var
-  Index, TextSize: Integer;
 begin
   //Play BG.wav Sound.
   if PlaySound then
@@ -591,15 +586,15 @@ begin
     end;
 
     repeat
-      x:=true;
+      xCollision := true;
       Food.X := (2+random(16))*32;
       Food.Y := (2+random(16))*32;
       for i := 1 to SnakeLong do
       begin
         if (Food.X = SnakeBody[i].x) and (Food.Y = SnakeBody[i].Y) then
-          x := false;
+          xCollision := false;
       end;
-    until x;
+    until xCollision;
 
     SnakeLong := SnakeLong + 1;
     SnakeBody[SnakeLong].X := SnakeBody[SnakeLong-1].X +32;
