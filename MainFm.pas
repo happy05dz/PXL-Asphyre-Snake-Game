@@ -109,13 +109,13 @@ type
     procedure BeginLevel;
     procedure ControlSnake;
     procedure gameover;
-
+    { Sound. }
     procedure InitBass;
     procedure DoneBass;
     procedure LoadSounds;
     procedure Channel_PauseAll;
     procedure Channel_ResumeAll;
-    //Limiting A Forms Size.
+    { Limiting A Forms Size. }
     procedure WMGetMinMaxInfo( var Message :TWMGetMinMaxInfo ); message WM_GETMINMAXINFO;
   public
     { Déclarations publiques }
@@ -162,11 +162,12 @@ begin
 
   ImageFormatManager := TImageFormatManager.Create;
   ImageFormatHandler := CreateDefaultImageFormatHandler(ImageFormatManager);
-
+  
+  { Specify that Default provider is to be used. }
   DeviceProvider := CreateDefaultProvider(ImageFormatManager);
-
+  
+  { Create PXL Device. }
   EngineDevice := DeviceProvider.CreateDevice as TCustomSwapChainDevice;
-
   DisplaySize := Point2i(ClientWidth, ClientHeight);
   EngineDevice.SwapChains.Add(Handle, DisplaySize);
 
@@ -176,7 +177,8 @@ begin
     Application.Terminate;
     Exit;
   end;
-
+  
+  { Create PXL Canvas compoment. }
   EngineCanvas := DeviceProvider.CreateCanvas(EngineDevice);
   if not EngineCanvas.Initialize then
   begin
@@ -230,6 +232,7 @@ begin
 
   InitBass;
 
+  { load  Best score if exist. }
   if FileExists(ExtractFilePath(Application.ExeName) + '\Score.dat') then
     begin
       IniScore := TIniFile.Create(  ExtractFilePath(Application.ExeName) + '\Score.dat' );
@@ -246,7 +249,7 @@ end;
 //=======================================================================
 procedure TMainForm.FormDestroy(Sender: TObject);
 begin
-  //Save Best score
+  { Save Best score. }
   if Yourscore > HighScore then
   begin
     IniScore := TIniFile.Create(  ExtractFilePath(Application.ExeName) + '\Score.dat' );
@@ -300,8 +303,9 @@ begin
 
   if Keys[VK_DOWN] and (SnakeDir<>1) then
     SnakeDir:=2; //Snake direction := Down;
-
-  if Keys[VK_SPACE] then //Press space to Start game!
+	
+  { Press space to Start game! }
+  if Keys[VK_SPACE] then 
   begin
     PressSpace := True;
     GameIsOver := False;
@@ -325,8 +329,8 @@ begin
 end;
 
 //=======================================================================
-//Limiting A Forms Size
-//http://www.angelfire.com/home/jasonvogel/delphi_source_limiting_a_forms_size.html
+{ Limiting A Forms Size
+ http://www.angelfire.com/home/jasonvogel/delphi_source_limiting_a_forms_size.html }
 procedure TMainForm.WMGetMinMaxInfo( var Message :TWMGetMinMaxInfo );
 begin
   with Message.MinMaxInfo^ do
@@ -399,7 +403,7 @@ end;
 //=======================================================================
 procedure TMainForm.gameover;
 begin
-  //Play Dead.wav Sound
+  { Play Dead.wav Sound }
   if PlaySound then
     PlaySample(EffectSamples[2], 10);
 
@@ -462,6 +466,7 @@ begin
   end;
 end;
 
+//=======================================================================
 procedure TMainForm.EnableSndBtnClick(Sender: TObject);
 begin
   PlaySound := True;
@@ -470,6 +475,7 @@ begin
   Channel_ResumeAll;
 end;
 
+//=======================================================================
 procedure TMainForm.DisableSndBtnClick(Sender: TObject);
 begin
   PlaySound := False;
@@ -481,31 +487,31 @@ end;
 //=======================================================================
 procedure TMainForm.RenderScene;
 begin
-  //Play BG.wav Sound.
+  { Play BG.wav Sound. }
   if PlaySound then
     PlaySample(EffectSamples[0], 10);
 
   if not GameisOver then
   begin
-    //Show "PXL Snake" logo.
+    { Show "PXL Snake" logo. }
     EngineCanvas.UseImageRegion(EngineImages[ImageLogo], 0);
     EngineCanvas.TexQuad(Quad(110.0, 90.0, 420.0, 420.0), ColorRectWhite);
 
-    //Press space to Start !
+    { Press space to Start ! }
     EngineFonts[FontTahoma].DrawText(
     Point2f(250.0, 520.0),
     'Press space to Start !',
     ColorPair($FFE8FFAA, $FF12C312));
   end;
 
-  //Start game.
+  { Start game. }
   if PressSpace = true then
   begin
-    //Show Background image.
+    { Show Background image. }
     EngineCanvas.UseImageRegion(EngineImages[ImageBackground], 0);
     EngineCanvas.TexQuad(Quad(0, 0, 640.0, 672.0), ColorRectWhite);
 
-    //Show Apple image.
+    { Show Apple image. }
     EngineCanvas.UseImage(EngineImages[ImageFood]);
     EngineCanvas.TexQuad(Quad(Food.X , Food.y, 32.0, 32.0), ColorRectWhite);
 
@@ -517,7 +523,8 @@ begin
       3:SnakeBody[1].X := SnakeBody[1].X -32;
       4:SnakeBody[1].X := SnakeBody[1].X +32;
     end;
-
+	
+    { Show Snake Body.}
     for i:=1 to SnakeLong do
     begin
       EngineCanvas.UseImage(EngineImages[ImageBody]);
@@ -525,42 +532,42 @@ begin
       sleep(SnakeSpeed);
     end;
 
-    //Collision with form border
+    { Collision with form border. }
     if (SnakeBody[1].X <16) or (SnakeBody[1].X >576) or (SnakeBody[1].y <48) or (SnakeBody[1].y >608) then
       gameover;
 
-    //Show Level.
+    { Show Level. }
     EngineFonts[FontTahoma].DrawText(
     Point2f(80.0, 11.0),
     'Level: ' + IntToStr(Level),
     ColorPair($FFFFE887, $FFFF0000));
-    //Show Score.
+    { Show Score. }
     EngineFonts[FontTahoma].DrawText(
     Point2f(160.0, 11.0),
     'Score: ' + IntToStr(Score),
     ColorPair($FFFFE887, $FFFF0000));
-    //Show Snake body[1].X position.
+    { Show Snake body[1].X position. }
     EngineFonts[FontTahoma].DrawText(
     Point2f(240.0, 11.0),
     'X: ' + IntToStr(SnakeBody[1].X),
     ColorPair($FFFFE887, $FFFF0000));
-    //Show Snake body[1].Y position.
+    { Show Snake body[1].Y position. }
     EngineFonts[FontTahoma].DrawText(
     Point2f(290.0, 11.0),
     'Y: ' + IntToStr(SnakeBody[1].Y),
     ColorPair($FFFFE887, $FFFF0000));
 
-    //Collision with himself.
+    { Collision with himself. }
     for i := 2 to SnakeLong do
     begin
       if (SnakeBody[i].X = SnakeBody[1].x) and (SnakeBody[i].y = SnakeBody[1].Y) then
         gameover;
     end;
 
-    //Collision with the Apple //Eat the Food
+    { Collision with the Apple //Eat the Food. }
     if (SnakeBody[1].X = Food.X) and (SnakeBody[1].Y = Food.Y)  then
     begin
-      //Play Coin.wav Sound
+      { Play Coin.wav Sound }
       if PlaySound then
         PlaySample(EffectSamples[1], 20);
 
@@ -608,17 +615,17 @@ begin
 
   if GameisOver then
   begin
-    //Draw the image of GameOver.
+    { Draw the image of GameOver. }
     EngineCanvas.UseImageRegion(EngineImages[ImageGameOver], 0);
     EngineCanvas.TexQuad(Quad(150.0, 90.0, 340.0, 70.0), ColorRectWhite);
 
-    //Show Your score.
+    { Show Your score. }
     EngineFonts[FontTahoma].DrawText(
     Point2f(250.0, 200.0),
     '--> Your score : ' + IntToStr(Yourscore),
     ColorPair($FFFFE887, $FFFF0000));
 
-    //Show Best score.
+    { Show Best score. }
     if HighScore > Yourscore then
     EngineFonts[FontTahoma].DrawText(
     Point2f(250.0, 230.0),
@@ -630,11 +637,11 @@ begin
     '--> Best score : ' + IntToStr(Yourscore),
     ColorPair($FFFFE887, $FFFF0000));
 
-    //Show "PXL Snake" logo.
+    { Show "PXL Snake" logo. }
     EngineCanvas.UseImageRegion(EngineImages[ImageLogo], 0);
     EngineCanvas.TexQuad(Quad(210.0, 280.0, 220.0, 220.0), ColorRectWhite);
 
-    //Show "Press space to Restart !".
+    { Show "Press space to Restart !". }
     EngineFonts[FontTahoma].DrawText(
     Point2f(240.0, 520.0),
     'Press space to Restart !',
@@ -645,7 +652,7 @@ begin
     NewBtn1.Enabled := False;
   end;
 
-  //Show current status.
+  { Show current status. }
   EngineFonts[FontTahoma].DrawText(
   Point2f(6.0, 11.0),
   'FPS: ' + IntToStr(EngineTimer.FrameRate),
