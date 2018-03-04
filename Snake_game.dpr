@@ -4,7 +4,8 @@ uses
   Vcl.Forms,
   MainFm in 'MainFm.pas' {MainForm},
   Sound.Globals in 'Sound.Globals.pas',
-  AboutFm in 'AboutFm.pas' {AboutForm};
+  AboutFm in 'AboutFm.pas' {AboutForm},
+  Engine.Globals in 'Engine.Globals.pas';
 
 {$R *.res}
 

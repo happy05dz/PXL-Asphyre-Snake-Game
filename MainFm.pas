@@ -37,8 +37,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.UITypes, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Menus, Vcl.StdCtrls, Vcl.ExtCtrls, PXL.TypeDef, PXL.Types,
-  PXL.Timing, PXL.ImageFormats, PXL.Devices, PXL.Textures, PXL.Canvas, PXL.SwapChains, PXL.Images,
-  PXL.Fonts, PXL.Providers, PXL.Archives, System.IniFiles;
+  PXL.Timing, PXL.ImageFormats, PXL.Devices, PXL.SwapChains, PXL.Images, PXL.Providers, System.IniFiles;
 
 type
   TMainForm = class(TForm)
@@ -80,17 +79,7 @@ type
 
     DeviceProvider: TGraphicsDeviceProvider;
 
-    EngineDevice: TCustomSwapChainDevice;
-    EngineCanvas: TCustomCanvas;
-    EngineImages: TAtlasImages;
-    EngineFonts: TBitmapFonts;
-    EngineTimer: TMultimediaTimer;
-
-    DisplaySize: TPoint2i;
     EngineTicks: Integer;
-
-    ImageBackground: Integer;
-    FontTahoma: Integer;
 
     GameisOver: Boolean;
     PressSpace: Boolean;
@@ -115,6 +104,7 @@ type
     procedure LoadSounds;
     procedure Channel_PauseAll;
     procedure Channel_ResumeAll;
+
     { Limiting A Forms Size. }
     procedure WMGetMinMaxInfo( var Message :TWMGetMinMaxInfo ); message WM_GETMINMAXINFO;
   public
@@ -124,20 +114,12 @@ type
 var
   MainForm: TMainForm;
 
-  EngineArchive: TArchive = nil;
-
-  ImageLogo: Integer = -1;
-  ImageBackground: Integer = -1;
-  ImageBody: Integer = -1;
-  ImageFood: Integer = -1;
-  ImageGameOver: Integer = -1;
-
   SnakeDir: Byte;
   SnakeLong: Byte;
   SnakeBody: array[0..400] of Tpoint;
-  i: Integer;
+  I: Integer;
   Food: Tpoint;
-  xCollision: Boolean;
+  XCollision: Boolean;
   PlaySound: Boolean;
   Level: Byte;
   SnakeSpeed: Byte;
@@ -152,17 +134,19 @@ implementation
 {$R *.dfm}
 
 uses
-  PXL.Classes, PXL.ImageFormats.Auto, PXL.Providers.Auto, PXL.Archives.Loading, bass,
-  Sound.Globals, AboutFm;
+  PXL.Classes, PXL.ImageFormats.Auto, PXL.Providers.Auto, PXL.Archives.Loading, PXL.Fonts, PXL.Archives,
+  Engine.Globals, Sound.Globals, AboutFm, bass;
+
+Const
+  ClientH = 672;
+  ClientW = 640;
 
 //=======================================================================
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
+ { Enable Delphi's memory manager to show memory leaks. }
   ReportMemoryLeaksOnShutdown := True;
 
-  ImageFormatManager := TImageFormatManager.Create;
-  ImageFormatHandler := CreateDefaultImageFormatHandler(ImageFormatManager);
-  
   { Specify that Default provider is to be used. }
   DeviceProvider := CreateDefaultProvider(ImageFormatManager);
   
@@ -177,7 +161,7 @@ begin
     Application.Terminate;
     Exit;
   end;
-  
+
   { Create PXL Canvas compoment. }
   EngineCanvas := DeviceProvider.CreateCanvas(EngineDevice);
   if not EngineCanvas.Initialize then
@@ -187,6 +171,7 @@ begin
     Exit;
   end;
 
+  { Create PXL Archive compoment. }
   EngineArchive := TArchive.Create;
   EngineArchive.OpenMode := TArchive.TOpenMode.ReadOnly;
 
@@ -197,6 +182,12 @@ begin
     Exit;
   end;
 
+  { General-purpose Image Format Manager. }
+  ImageFormatManager := TImageFormatManager.Create;
+  { Creates image format handler. }
+  ImageFormatHandler := CreateDefaultImageFormatHandler(ImageFormatManager);
+
+  { Create PXL Images compoment. }
   EngineImages := TAtlasImages.Create(EngineDevice);
 
   ImageBackground := LoadImageFromArchive('Background.Image', EngineImages, EngineArchive);
@@ -205,6 +196,7 @@ begin
   ImageFood := LoadImageFromArchive('Food.image', EngineImages, EngineArchive);
   ImageGameOver := LoadImageFromArchive('GameOver.image', EngineImages, EngineArchive);
 
+  { Create PXL Fonts compoment. }
   EngineFonts := TBitmapFonts.Create(EngineDevice);
   EngineFonts.Canvas := EngineCanvas;
 
@@ -216,6 +208,7 @@ begin
     Exit;
   end;
 
+  { Initialize and prepare the timer. }
   EngineTimer := TMultimediaTimer.Create;
   EngineTimer.OnTimer := EngineTiming;
   EngineTimer.OnProcess := EngineProcess;
@@ -225,11 +218,13 @@ begin
   EngineTicks := 0;
 
   MainForm.Caption:= 'Snake Game - Technology: ' + GetFullDeviceTechString(EngineDevice);
-  MainForm.ClientHeight := 672;
-  MainForm.ClientWidth := 640;
+  MainForm.ClientHeight := ClientH;
+  MainForm.ClientWidth := ClientW;
+  { Configure the current window to be placed in the centre of screen. }
   MainForm.Left := (Screen.Width - MainForm.Width) div 2;
   MainForm.Top := (Screen.Height - MainForm.Height) div 2;
 
+  { initialize bass.dll }
   InitBass;
 
   { load  Best score if exist. }
@@ -260,6 +255,8 @@ begin
      end;
   end;
 
+  DoneBass;
+  { Release all Asphyre components. }
   EngineTimer.Free;
   EngineFonts.Free;
   EngineImages.Free;
@@ -269,7 +266,6 @@ begin
   ImageFormatHandler.Free;
   ImageFormatManager.Free;
   EngineArchive.Free;
-  DoneBass;
 end;
 
 //=======================================================================
@@ -532,26 +528,26 @@ begin
       sleep(SnakeSpeed);
     end;
 
-    { Collision with form border. }
+    { Collision with MainForm border. }
     if (SnakeBody[1].X <16) or (SnakeBody[1].X >576) or (SnakeBody[1].y <48) or (SnakeBody[1].y >608) then
       gameover;
 
-    { Show Level. }
+    { Display Level. }
     EngineFonts[FontTahoma].DrawText(
     Point2f(80.0, 11.0),
     'Level: ' + IntToStr(Level),
     ColorPair($FFFFE887, $FFFF0000));
-    { Show Score. }
+    { Display Score. }
     EngineFonts[FontTahoma].DrawText(
     Point2f(160.0, 11.0),
     'Score: ' + IntToStr(Score),
     ColorPair($FFFFE887, $FFFF0000));
-    { Show Snake body[1].X position. }
+    { Display Snake body[1].X position. }
     EngineFonts[FontTahoma].DrawText(
     Point2f(240.0, 11.0),
     'X: ' + IntToStr(SnakeBody[1].X),
     ColorPair($FFFFE887, $FFFF0000));
-    { Show Snake body[1].Y position. }
+    { Display Snake body[1].Y position. }
     EngineFonts[FontTahoma].DrawText(
     Point2f(290.0, 11.0),
     'Y: ' + IntToStr(SnakeBody[1].Y),
@@ -593,15 +589,15 @@ begin
     end;
 
     repeat
-      xCollision := true;
+      XCollision := true;
       Food.X := (2+random(16))*32;
       Food.Y := (2+random(16))*32;
       for i := 1 to SnakeLong do
       begin
         if (Food.X = SnakeBody[i].x) and (Food.Y = SnakeBody[i].Y) then
-          xCollision := false;
+          XCollision := false;
       end;
-    until xCollision;
+    until XCollision;
 
     SnakeLong := SnakeLong + 1;
     SnakeBody[SnakeLong].X := SnakeBody[SnakeLong-1].X +32;
@@ -619,13 +615,13 @@ begin
     EngineCanvas.UseImageRegion(EngineImages[ImageGameOver], 0);
     EngineCanvas.TexQuad(Quad(150.0, 90.0, 340.0, 70.0), ColorRectWhite);
 
-    { Show Your score. }
+    { Display Your score. }
     EngineFonts[FontTahoma].DrawText(
     Point2f(250.0, 200.0),
     '--> Your score : ' + IntToStr(Yourscore),
     ColorPair($FFFFE887, $FFFF0000));
 
-    { Show Best score. }
+    { Display Best score. }
     if HighScore > Yourscore then
     EngineFonts[FontTahoma].DrawText(
     Point2f(250.0, 230.0),
@@ -641,7 +637,7 @@ begin
     EngineCanvas.UseImageRegion(EngineImages[ImageLogo], 0);
     EngineCanvas.TexQuad(Quad(210.0, 280.0, 220.0, 220.0), ColorRectWhite);
 
-    { Show "Press space to Restart !". }
+    { Display "Press space to Restart !". }
     EngineFonts[FontTahoma].DrawText(
     Point2f(240.0, 520.0),
     'Press space to Restart !',
@@ -652,7 +648,7 @@ begin
     NewBtn1.Enabled := False;
   end;
 
-  { Show current status. }
+  { Display current status. }
   EngineFonts[FontTahoma].DrawText(
   Point2f(6.0, 11.0),
   'FPS: ' + IntToStr(EngineTimer.FrameRate),
